@@ -60,7 +60,7 @@ insert_final_newline = true
 
 ## Batch Scripts
 ################
-[*.bat]
+[*.{bat,cmd}]
 indent_style = tab
 indent_size = unset
 end_of_line = crlf
