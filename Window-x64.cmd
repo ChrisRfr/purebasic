@@ -41,20 +41,20 @@ If Not Exist "%PUREBASIC_HOME%\SDK\LibraryMaker.exe" (Echo PureBasic Home Folder
 If Not Exist "%PB_VS8%\VC\include" (Echo Microsoft Visual Studio 12.0 ^(2013^) Folder not found && Echo Check PB_VS8 variable) && Echo. && Pause && Goto End)
 If Not Exist "%MAKE_PATH%\make.exe" (Echo Path to Make and dependencies Folder not found && Echo Check PB_VS8 variable) && Echo. && Pause && Goto End)
 If %USE_SDK10%==False (
-  If Not Exist "%PB_PLATEFORM_SDK%\Include" (Echo Microsoft 7.1 SDK Folder not found && Echo Check PB_PLATEFORM_SDK variable) && Echo. && Pause && Goto End)
+	If Not Exist "%PB_PLATEFORM_SDK%\Include" (Echo Microsoft 7.1 SDK Folder not found && Echo Check PB_PLATEFORM_SDK variable) && Echo. && Pause && Goto End)
 )
 If %USE_SDK10%==True (
-  If Not Exist "%PB_PLATEFORM_SDK10%\Lib\%SDK10_VERSION%" (Echo Microsoft 10 SDK Folder not found && Echo Check PB_PLATEFORM_SDK10 and SDK10_VERSION variables) && Echo. && Pause && Goto End)
+	If Not Exist "%PB_PLATEFORM_SDK10%\Lib\%SDK10_VERSION%" (Echo Microsoft 10 SDK Folder not found && Echo Check PB_PLATEFORM_SDK10 and SDK10_VERSION variables) && Echo. && Pause && Goto End)
 )
 
 
 If %USE_SDK10%==False (
-  Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX64 -DPB_64 -D_USING_V110_SDK71_ -I"%PB_PLATEFORM_SDK%\Include" -I"%PB_PLATEFORM_SDK%\Include\crt" -I. /nologo /GS- /D_CRT_NOFORCE_MANIFEST
-  Set PB_LINKER=link /LIBPATH:"%PB_PLATEFORM_SDK%\Lib\x64" /LIBPATH:"%PB_VS8%\VC\Lib\amd64"
+	Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX64 -DPB_64 -D_USING_V110_SDK71_ -I"%PB_PLATEFORM_SDK%\Include" -I"%PB_PLATEFORM_SDK%\Include\crt" -I. /nologo /GS- /D_CRT_NOFORCE_MANIFEST
+	Set PB_LINKER=link /LIBPATH:"%PB_PLATEFORM_SDK%\Lib\x64" /LIBPATH:"%PB_VS8%\VC\Lib\amd64"
 )
 If %USE_SDK10%==True (
-  Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX64 -DPB_64 -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\ucrt" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\shared" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\um" -I. /nologo /GS- /D_CRT_NOFORCE_MANIFEST
-  Set PB_LINKER=link /LIBPATH:"%PB_PLATEFORM_SDK10%\Lib\%SDK10_VERSION%\ucrt\x64" /LIBPATH:"%PB_VS8%\VC\Lib\amd64"
+	Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX64 -DPB_64 -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\ucrt" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\shared" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\um" -I. /nologo /GS- /D_CRT_NOFORCE_MANIFEST
+	Set PB_LINKER=link /LIBPATH:"%PB_PLATEFORM_SDK10%\Lib\%SDK10_VERSION%\ucrt\x64" /LIBPATH:"%PB_VS8%\VC\Lib\amd64"
 )
 
 Set PB_VC8=%PB_VC8_ANSI% -DUNICODE
