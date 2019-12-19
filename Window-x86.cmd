@@ -1,56 +1,88 @@
-@echo off
+@Echo off
+Cd /D %~dp0
 
-:: Set the PureBasic home directory to a real x64 PureBasic installation (warning:
-:: when compilig, the IDE will be overwriten with the new one.
-set PUREBASIC_HOME=C:\PureBasic\Svn\v5.70\Build\PureBasic_x86
+:: Set the PureBasic home directory to a real x86 PureBasic installation
+:: Warning:
+::   Use a Path Without Space
+::   When compiling, the IDE will be Overwriten with the new one
+::   If you use C:\PROGRA~2\PureBasic short path (C:\Program Files (x86)\PureBasic). You Must run this batch as Administrator to have full control
+Set PUREBASIC_HOME=C:\PROGRA~2\PureBasic
+::Set PUREBASIC_HOME=E:\PureBasic\Portable\PureBasic_5.71_x86
+
+Echo. > "%PUREBASIC_HOME%\Tmp_FullAccess"
+If Exist "%PUREBASIC_HOME%\Tmp_FullAccess" (Del /q /f "%PUREBASIC_HOME%\Tmp_FullAccess") Else (Echo Run this batch as Admin to have full control on PUREBASIC_HOME path && Echo. && Pause && Goto End)
+
+:: USE_SDK10=True for using Microsoft 10 SDK (Check SDK10_VERSION) / USE_SDK10=False for using Microsoft 7.1 SDK
+Set USE_SDK10=True
+
+Set PB_PLATEFORM_SDK=%ProgramFiles%\Microsoft SDKs\Windows\v7.1
+Set PB_PLATEFORM_SDK10=%ProgramFiles(x86)%\Windows Kits\10
+Set SDK10_VERSION=10.0.18362.0
+
+Set PB_VS8=%ProgramFiles(x86)%\Microsoft Visual Studio 12.0
+Set PATH=%PB_VS8%\VC\bin;%PATH%
+
+:: Path to Make and dependencies from UnxUtil (cp.exe,make.exe,pwd.exe,rm.exe,touch.exe,zip.exe)
+:: or Path to Make and dependencies from Gnuwin32 (bzip2.dll,cp.exe,libiconv2.dll,libintl3.dll,make.exe,pwd.exe,rm.exe,touch.exe,zip.exe). Here extracted, in Bin subfolder
+::Set MAKE_PATH=%~dp0\UnxUtils\usr\local\wbin
+Set MAKE_PATH=%~dp0\Bin
+Set PATH=%MAKE_PATH%;%PATH%
+
+Set PB_LIBRARIES=%~dp0\Libraries
+Set PB_BUILDTARGET=%~dp0\Build\x86
+
+Set PB_PROCESSOR=X86
+
+Set PATH=%PUREBASIC_HOME%\Compilers;%PATH%
+
+:: Check Path Variables
+If Not Exist "%PUREBASIC_HOME%\SDK\LibraryMaker.exe" (Echo PureBasic Home Folder not found && Echo Check PUREBASIC_HOME variable) && Echo. && Pause && Goto End)
+If Not Exist "%PB_VS8%\VC\include" (Echo Microsoft Visual Studio 12.0 ^(2013^) Folder not found && Echo Check PB_VS8 variable) && Echo. && Pause && Goto End)
+If Not Exist "%MAKE_PATH%\make.exe" (Echo Path to Make and dependencies Folder not found && Echo Check PB_VS8 variable) && Echo. && Pause && Goto End)
+If %USE_SDK10%==False (
+  If Not Exist "%PB_PLATEFORM_SDK%\Include" (Echo Microsoft 7.1 SDK Folder not found && Echo Check PB_PLATEFORM_SDK variable) && Echo. && Pause && Goto End)
+)
+If %USE_SDK10%==True (
+  If Not Exist "%PB_PLATEFORM_SDK10%\Lib\%SDK10_VERSION%" (Echo Microsoft 10 SDK Folder not found && Echo Check PB_PLATEFORM_SDK10 and SDK10_VERSION variables) && Echo. && Pause && Goto End)
+)
 
 
-set PB_VS8=C:/Program Files (x86)/Microsoft Visual Studio 12.0
-set PB_PLATEFORM_SDK=C:/Program Files/Microsoft SDKs/Windows/v7.0
-set PB_DIRECTX7_SDK=C:/Program Files (x86)/Microsoft DirectX 9.0 SDK (December 2004)
-set PB_DIRECTX9_SDK=C:/Program Files (x86)/Microsoft DirectX SDK (August 2009)
+If %USE_SDK10%==False (
+  Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX86 -D_USING_V110_SDK71_ -I"%PB_PLATEFORM_SDK%\Include" -I"%PB_PLATEFORM_SDK%\Include\crt" -I. /nologo /arch:IA32 /GS- /D_CRT_NOFORCE_MANIFEST /D_USE_32BIT_TIME_T
+)
+If %USE_SDK10%==True (
+  Set PB_VC8_ANSI=cl.exe -I"%PB_VS8%\VC\include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX86 -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\ucrt" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\shared" -I"%PB_PLATEFORM_SDK10%\Include\%SDK10_VERSION%\um" -I. /nologo /arch:IA32 /GS- /D_CRT_NOFORCE_MANIFEST /D_USE_32BIT_TIME_T
+)
 
+Set PB_VC8=%PB_VC8_ANSI% -DUNICODE
+Set PB_NASM=nasm -DWINDOWS -fwin32 -O3
+Set PB_LINKER=polink
+Set PB_LIBRARIAN=polib
+Set PB_LIBRARYMAKER="%PUREBASIC_HOME%\SDK\LibraryMaker.exe" /NOLOG /COMPRESSED /CONSTANT WINDOWS /CONSTANT %PB_PROCESSOR%
+Set PB_IOFIX="/D__iob_func=__p__iob" /D_gmtime32=gmtime /D_mktime32=mktime
+Set PB_OGREFLAGS=/MT /O2
 
-set PB_LIBRARIES=%CD%/Libraries
-set PB_BUILDTARGET=%CD%/Build/x86
+Set PB_OGRELIBRARIAN=lib /NOLOGO
+Set PB_WINDOWS=1
+Set PB_OBJ=obj
+Set PB_LIB=lib
 
+:: Set a default subsystem
+Set PB_SUBSYSTEM=purelibraries/
 
-set PATH=%PB_VS8%/VC/bin;%PATH%
-set PATH=C:/Program Files (x86)/Microsoft DirectX SDK (August 2009)/Utilities/bin/x86;C:\Program Files\TortoiseSVN\bin;%PATH%
+Echo.
+Echo Setting Environment for PureBasic %PB_PROCESSOR%
+Echo.
+Echo Type: Make to Compile all the Dependencies and the IDE
+Echo.
 
-
-set PB_PROCESSOR=X86
-
-set PATH=%PUREBASIC_HOME%/Compilers;%PATH%
-
-set PB_VC8_ANSI=cl.exe -I"%PB_VS8%/VC/include" -I"%PB_LIBRARIES%" -DWINDOWS -DVISUALC -DX86 -D_USING_V110_SDK71_ -I"%PB_PLATEFORM_SDK%/Include" -I"%PB_PLATEFORM_SDK%/Include/crt" -I. -I"%PB_DIRECTX9_SDK%/Include" -I"%PB_DIRECTX7_SDK%/Include" /nologo /arch:IA32 /GS- /D_CRT_NOFORCE_MANIFEST /D_USE_32BIT_TIME_T
-set PB_VC8=%PB_VC8_ANSI% -DUNICODE
-set PB_NASM=nasm -DWINDOWS -fwin32 -O3
-set PB_LINKER=polink
-set PB_LIBRARIAN=polib
-set PB_LIBRARYMAKER="%PUREBASIC_HOME%/SDK/LibraryMaker.exe" /NOLOG /COMPRESSED /CONSTANT WINDOWS /CONSTANT %PB_PROCESSOR%
-set PB_IOFIX="/D__iob_func=__p__iob" /D_gmtime32=gmtime /D_mktime32=mktime
-set PB_OGREFLAGS=/MT /O2
-
-set PB_OGRELIBRARIAN=lib /NOLOGO
-set PB_WINDOWS=1
-set PB_OBJ=obj
-set PB_LIB=lib
-
-:: set a default subsystem
-set PB_SUBSYSTEM=purelibraries/
-
-echo Setting environment for PureBasic %PB_PROCESSOR%
-echo.
-
-
+Cd PureBasicIDE
 :: If we don't specify any args, we want to open a CMD. Else we can use this script to setup an env for batching
-IF [%1]==[] GOTO opencmd
+If [%1]==[] Goto OpenCmd
 
-GOTO end
+Goto End
 
-:opencmd
-
+:OpenCmd
 cmd
 
-:end
+:End
