@@ -1306,6 +1306,12 @@ Procedure jsaction(message.s)
 
     CompilerIf #Standalone
       If t<>""
+        If FindString(t,"CreateThread",1,#PB_String_NoCase)
+          t + " /THREAD"
+        EndIf
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          t + " /XP /DPIAWARE"
+        CompilerEndIf
         che=GetTemporaryDirectory()+ficnom
         WriteTextFile(che, t)
         Select Mid(type,2,1)
@@ -1315,6 +1321,13 @@ Procedure jsaction(message.s)
       EndIf
     CompilerElse ; IDE: charge dans un nouvel onglet (et execute si demande)
       If OpenCodeCallback And (che<>"" Or t<>"")
+        t + #LF$ + "; IDE Options"
+        If FindString(t,"CreateThread",1,#PB_String_NoCase)
+            t + #LF$ + "; EnableThread"
+        EndIf
+        CompilerIf #PB_Compiler_OS = #PB_OS_Windows
+          t + #LF$ + "; EnableXP" + #LF$ + "; DPIAware"
+        CompilerEndIf
         OpenCodeCallback(che, t, Bool(Mid(type,2,1)="r"))
       EndIf
     CompilerEndIf
