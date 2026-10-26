@@ -1822,6 +1822,7 @@ Procedure show(page.s) ; affiche une page si elle existe (aide contextuelle F1)
   page=LCase(page)
   If FindMapElement(*pid(),page)=0:ProcedureReturn #False:EndIf
   affiche(page)
+  If IsGadget(gonglet):SetGadgetState(gonglet,0):EndIf ; F1: back to the Contents tab, where the page is selected in the tree
   ProcedureReturn #True
 EndProcedure
 
