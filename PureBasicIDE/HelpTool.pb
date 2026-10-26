@@ -1378,7 +1378,7 @@ EndProcedure
 Procedure lancerecherche(vide=#False) ; remplit la liste des resultats: mots tous presents, tries par pertinence, limites aux pastilles cochees
   Protected.s txt,q,t
   Protected.spage *p
-  Protected n,score,ok,allin
+  Protected n,rank,ok,allin
   NewList result.sresult()
   NewList words.s()
   NewMap sel.i()
@@ -1401,33 +1401,33 @@ Procedure lancerecherche(vide=#False) ; remplit la liste des resultats: mots tou
   ForEach page()
     *p=@page()
     If MapSize(sel())=0 Or FindMapElement(sel(),*p\groupe)
-      t=LCase(*p\titre):ok=#True:score=100
+      t=LCase(*p\titre):ok=#True:rank=9 ; rank (9 = Least)
       ForEach words() ; chaque mot dans le titre ou dans la source de la page
         If FindString(t,words())=0 And FindString(*p\src,words(),1,#PB_String_NoCase)=0:ok=#False:Break:EndIf
       Next
       If ok And ListSize(words())
-        ; rang: nom exact 1000, nom commence par 800, nom contient 600, tous les mots dans le nom 500, mot-cle (@Keyword) 300, reste (description...) 100
+        ; rank (0 = best): exact name 0, name starts with 1, name contains 2, all words in the name 3, keyword (@Keyword) 4, rest (description...) 5
         If t=q
-          score=1000
+          rank=0
         ElseIf Left(t,Len(q))=q
-          score=800
+          rank=1
         ElseIf FindString(t,q)
-          score=600
+          rank=2
         Else
           allin=#True
           ForEach words():If FindString(t,words())=0:allin=#False:Break:EndIf:Next
           FirstElement(words())
           If allin
-            score=500
+            rank=3
           ElseIf FindString(*p\src,"@Keyword "+words(),1,#PB_String_NoCase)
-            score=300
+            rank=4
           EndIf
         EndIf
       EndIf
       If ok
         AddElement(result())
         result()\p=*p
-        result()\key=RSet(Str(1000-score),4,"0")+t+#LF$+*p\nom
+        result()\key=Str(rank)+t+#LF$+*p\nom
       EndIf
     EndIf
   Next
