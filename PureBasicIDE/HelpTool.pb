@@ -50,16 +50,18 @@ Declare packinfo(nzip)
 Declare.s cvhtml(txt.s,lf=0)
 
 #EventJsMessage = #PB_Event_FirstCustomValue + 500 ; WebView callback actions are deferred to the event loop
-#ChipsHeight    = 150  ; hauteur de la zone des pastilles (la zone defile seulement si elles ne tiennent pas)
-#ChipFontSize   = 7
-#GroupeReference$ = "Reference" ; pastille des pages hors bibliotheque
+#ChipsHeight    = 150  ; height of the chips area (it scrolls only if the chips do not fit)
+#GroupeReference$ = "Reference" ; chip for the pages outside a library
 CompilerSelect #PB_Compiler_OS
   CompilerCase #PB_OS_Windows
-    #ChipFontName$ = "Segoe UI"
+    #ChipFontName$ = "Segoe UI"      ; Windows: IDE default Font, size 10 -> chips 8  or a little smaller 7
+    #ChipFontSize  = 8
   CompilerCase #PB_OS_MacOS
-    #ChipFontName$ = "Helvetica Neue"
+    #ChipFontName$ = "Lucida Grande" ; MacOS:   IDE default Font, size 13 -> chips 10 or a little smaller 9
+    #ChipFontSize  = 10
   CompilerDefault
-    #ChipFontName$ = "Sans"
+    #ChipFontName$ = "DejaVu Sans"   ; Linux:   IDE default Font, size 10 -> chips 8 or a little smaller 7 
+    #ChipFontSize  = 8
 CompilerEndSelect
 #ForceIEMode    = #False ; Windows: #True to test the degraded mode (WebGadget/Internet Explorer) even if WebView2 is available
 
@@ -74,7 +76,7 @@ Structure spage
   sommaire.w
   userlib.s
   libdest.s
-  groupe.s  ; bibliotheque de la page (pastilles de recherche)
+  groupe.s  ; library of the page (search chips)
 EndStructure
 
 Structure sbalise
@@ -85,14 +87,14 @@ Structure sbalise
   pre.w     ; balise <pre>:1, </pre>:-1
 EndStructure
 
-Structure schip ; pastille de recherche (une par bibliotheque, plus la pastille All)
+Structure schip ; search chip (one per library, plus All)
   nom.s
   gadget.i
   w.l
-  tous.b ; 1: pastille All (efface la selection)
+  tous.b ; 1 = the All chip
 EndStructure
 
-Structure sresult ; resultat de recherche, trie par clef (rang + titre)
+Structure sresult ; search result with its sort key (rank + title)
   key.s
   *p.spage
 EndStructure
@@ -118,7 +120,7 @@ Global waide,waidex,waidey,waidedx,waidedy
 ; ---------- UI
 Global gonglet,gsommaire,grec,grecliste,gweb,gacc,gprec,gsuiv,glangue,gos,gediter,gsep,gdialog,groot,gsommairevisible=-1
 Global imgprec,imgsuiv,imgacc,imgediter,imgsommaire
-Global gchips,gchipsarea,chipfont,chiph,chipsx=-1,chipsy,chipsw=-1,chipsh ; pastilles: emplacement (canvas du dialog), zone defilante, police, hauteur, derniere geometrie
+Global gchips,chipfont,chipheight
 Global NewList chip.schip()
 Global.s icoouvrir="&#128194;",icoexecuter="&#9654;" ; boutons des exemples (remplacés par les icônes de l'IDE)
 ; ---------- traduction
@@ -631,105 +633,98 @@ Procedure pagesgenerees() ; pages construites a partir des autres pages (comme l
   ajoutepage("pbconstants",_Constantes,t)
 EndProcedure
 
-Procedure layoutchips() ; range les pastilles a la suite, a la ligne si besoin (ascenseur vertical seulement si ca ne tient pas)
+Procedure layoutchips() ; places the chips line by line (vertical scrollbar only if they do not fit)
   Protected x,y,pass,larg,haut,innerw,innerh
-  Protected pad=3,gap=3
+  Protected pad=2,gap=2 ; or a little more space between the buttons with pad=3,gap=3
 
-  If IsGadget(gchipsarea)=0:ProcedureReturn:EndIf
-  larg=GadgetWidth(gchipsarea):haut=GadgetHeight(gchipsarea)
-  For pass=0 To 1
-    innerw=larg-2*pad-4-pass*20 ; passe 1: place pour l'ascenseur vertical
+  If IsGadget(gchips)=0:ProcedureReturn:EndIf
+  larg=GadgetWidth(gchips):haut=GadgetHeight(gchips)
+  For pass=0 To 1 ; pass 0: no vertical scrollbar, pass 1: room reserved for it
+    innerw=larg-2*pad-4-pass*20
     x=pad:y=pad
     ForEach chip()
-      If x+chip()\w>innerw And x>pad:x=pad:y+chiph+gap:EndIf
-      ResizeGadget(chip()\gadget,x,y,chip()\w,chiph)
+      If x+chip()\w>innerw And x>pad:x=pad:y+chipheight+gap:EndIf
+      ResizeGadget(chip()\gadget,x,y,chip()\w,chipheight)
       x+chip()\w+gap
     Next
-    innerh=y+chiph+pad
+    innerh=y+chipheight+pad
     If innerh<=haut:Break:EndIf
   Next
-  SetGadgetAttribute(gchipsarea,#PB_ScrollArea_InnerWidth,innerw+2*pad)
-  SetGadgetAttribute(gchipsarea,#PB_ScrollArea_InnerHeight,innerh)
+  SetGadgetAttribute(gchips,#PB_ScrollArea_InnerWidth,innerw+2*pad)
+  SetGadgetAttribute(gchips,#PB_ScrollArea_InnerHeight,innerh)
 EndProcedure
 
-Procedure placechips() ; cale la zone des pastilles sur son emplacement dans le dialog (appelee a chaque redimensionnement possible)
-  Protected x,y,w,h
-
-  If IsGadget(gchips)=0 Or IsGadget(gchipsarea)=0:ProcedureReturn:EndIf
+Procedure placechips(Force=#False) ; relays out the chips when the size of the area (resized by the dialog) has changed; called on every possible resize
+  Protected w,h
+  Static chipsw,chipsh
+  
+  If IsGadget(gchips)=0:ProcedureReturn:EndIf
   w=GadgetWidth(gchips):h=GadgetHeight(gchips)
-  If w<20 Or h<10:ProcedureReturn:EndIf ; panneau pas encore affiche
-  x=GadgetX(gchips):y=GadgetY(gchips)
-  If x=chipsx And y=chipsy And w=chipsw And h=chipsh:ProcedureReturn:EndIf
-  chipsx=x:chipsy=y:chipsw=w:chipsh=h
-  ResizeGadget(gchipsarea,x,y,w,h)
-  layoutchips()
+  If w<20 Or h<10:chipsw=-1:ProcedureReturn:EndIf ; in case panel not shown yet
+  If Force Or w<>chipsw Or h<>chipsh
+    chipsw=w:chipsh=h
+    layoutchips()
+  EndIf
 EndProcedure
 
-Procedure buildchips() ; (re)cree les pastilles: une par bibliotheque + Reference, d'apres les pages chargees
-  Protected.s nom
-  Protected img
-  NewMap libfichier.s()
-  NewMap vu.i()
-  NewList noms.s()
+Procedure buildchips() ; (re)creates the chips: one per library + Reference, from the loaded pages
+  Protected nom$, Dummy
+  Protected NewMap libfichier.s(), NewMap libnom.i()
 
-  If IsGadget(gchips)=0 Or IsGadget(gonglet)=0:ProcedureReturn:EndIf
-  If IsGadget(gchipsarea):FreeGadget(gchipsarea):EndIf
-  gchipsarea=0:ClearList(chip()):chipsx=-1:chipsw=-1
+  If IsGadget(gchips)=0:ProcedureReturn:EndIf
+  ForEach chip():If IsGadget(chip()\gadget):FreeGadget(chip()\gadget):EndIf:Next ; only the buttons: the scroll area belongs to the dialog
+  ClearList(chip())
 
-  ; bibliotheque d'un fichier = titre de sa page lib_
+  ; library of a file = title of its lib_ page
   ForEach page()
     If Left(page()\nom,4)="lib_" And page()\userlib="":libfichier(page()\fichier)=page()\titre:EndIf
   Next
   ForEach page()
     If page()\userlib<>""
-      nom=page()\userlib
+      page()\groupe=page()\userlib
     ElseIf FindMapElement(libfichier(),page()\fichier)
-      nom=libfichier()
+      page()\groupe=libfichier()
     Else
-      nom=#GroupeReference$
+      page()\groupe=#GroupeReference$
     EndIf
-    page()\groupe=nom
-    If vu(nom)=0:vu(nom)=1:AddElement(noms()):noms()=nom:EndIf
+    libnom(page()\groupe)=1
   Next
-  SortList(noms(),#PB_Sort_Ascending|#PB_Sort_NoCase)
-
-  ; All en premier, puis Reference, puis les bibliotheques par ordre alphabetique
-  LastElement(chip()):AddElement(chip()):chip()\nom="All":chip()\tous=#True
-  If FindMapElement(vu(),#GroupeReference$)
-    LastElement(chip()):AddElement(chip()):chip()\nom=#GroupeReference$
+  
+  ; order: All, Reference, then the libraries alphabetically
+  ForEach libnom()
+    nom$=MapKey(libnom())
+    If nom$<>#GroupeReference$:AddElement(chip()):chip()\nom=nom$:EndIf
+  Next
+  SortStructuredList(chip(),#PB_Sort_Ascending|#PB_Sort_NoCase,OffsetOf(schip\nom),#PB_String)
+  If FindMapElement(libnom(),#GroupeReference$)
+    AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom=#GroupeReference$
   EndIf
-  ForEach noms()
-    If noms()<>#GroupeReference$:LastElement(chip()):AddElement(chip()):chip()\nom=noms():EndIf
-  Next
+  AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom="All":chip()\tous=#True
 
-  ; largeur des pastilles: texte mesure avec la petite police (en unites logiques)
+  
+  OpenGadgetList(gchips)
+  ; chip size = required size of a button with the small font
   If chipfont=0:chipfont=LoadFont(#PB_Any,#ChipFontName$,#ChipFontSize):EndIf
-  chiph=18
-  img=CreateImage(#PB_Any,16,16)
-  If img
-    If StartDrawing(ImageOutput(img))
-      If chipfont:DrawingFont(FontID(chipfont)):EndIf
-      chiph=DesktopUnscaledY(TextHeight("Ag"))+8
-      ForEach chip():chip()\w=DesktopUnscaledX(TextWidth(chip()\nom))+14:Next
-      StopDrawing()
-    EndIf
-    FreeImage(img)
-  EndIf
-  ForEach chip():If chip()\w=0:chip()\w=Len(chip()\nom)*6+14:EndIf:Next
-
-  ; zone defilante dans l'onglet Recherche, au meme endroit que le canvas du dialog
-  OpenGadgetList(gonglet,1)
-  gchipsarea=ScrollAreaGadget(#PB_Any,0,0,100,#ChipsHeight,100,#ChipsHeight,10,#PB_ScrollArea_BorderLess)
+  Dummy=ButtonGadget(#PB_Any,0,0,0,0,"Abc")
+  If chipfont:SetGadgetFont(Dummy,FontID(chipfont)):EndIf
+  chipheight=GadgetHeight(Dummy,#PB_Gadget_RequiredSize)
+  ;If chipheight<=0:chipheight=18:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   ForEach chip()
-    chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chiph,chip()\nom,#PB_Button_Toggle)
-    If chipfont:SetGadgetFont(chip()\gadget,FontID(chipfont)):EndIf
-    If chip()\tous:SetGadgetState(chip()\gadget,1):EndIf ; All enfoncee: aucune bibliotheque cochee
+    SetGadgetText(Dummy,chip()\nom)
+    chip()\w=GadgetWidth(Dummy,#PB_Gadget_RequiredSize)
+    ;If chip()\w<=0:chip()\w=Len(chip()\nom)*6+14:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   Next
-  CloseGadgetList() ; zone defilante
-  CloseGadgetList() ; onglet
-  HideGadget(gchips,1) ; le canvas du dialog (simple emplacement) est sous la zone: masque pour ne pas intercepter la souris
-  If ApplyColorsCallback:ApplyColorsCallback(gchipsarea):EndIf
-  placechips()
+  FreeGadget(Dummy)
+  
+  ; the buttons go inside the scroll area created by the dialog
+  ForEach chip()
+    chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\nom,#PB_Button_Toggle)
+    If chipfont:SetGadgetFont(chip()\gadget,FontID(chipfont)):EndIf
+    If chip()\tous:SetGadgetState(chip()\gadget,1):EndIf ; All pressed: no library selected
+  Next
+  CloseGadgetList()
+  If ApplyColorsCallback:ApplyColorsCallback(gchips):EndIf
+  placechips(#True)
 EndProcedure
 
 Procedure initFichier(enableUI=1)
@@ -1375,7 +1370,7 @@ Procedure jsprocess()
   Wend
 EndProcedure
 
-Procedure lancerecherche(vide=#False) ; remplit la liste des resultats: mots tous presents, tries par pertinence, limites aux pastilles cochees
+Procedure lancerecherche(vide=#False) ; fills the result list: all words must match, sorted by rank, filtered by the checked chips
   Protected.s txt,q,t
   Protected.spage *p
   Protected n,rank,ok,allin
@@ -1384,14 +1379,14 @@ Procedure lancerecherche(vide=#False) ; remplit la liste des resultats: mots tou
   NewMap sel.i()
 
   txt=Trim(GetGadgetText(grec))
-  If Len(txt)<3:txt="":EndIf ; texte trop court: pas de recherche dans les sources, seulement le filtre des pastilles
+  If Len(txt)<3:txt="":EndIf ; text too short: only the chips filter, no search in the sources
   ForEach chip():If chip()\tous=0 And GetGadgetState(chip()\gadget):sel(chip()\nom)=1:EndIf:Next
-  If txt="" And MapSize(sel())=0 ; rien a chercher ni a filtrer: la liste reste telle quelle (videe si on vient de decocher les pastilles)
+  If txt="" And MapSize(sel())=0 ; nothing to search or filter: keep the list (cleared if vide)
     If vide:ClearGadgetItems(grecliste):EndIf
     ProcedureReturn
   EndIf
 
-  ; mots (tous obligatoires) et phrase normalisee
+  ; words (all required) and normalized phrase
   For n=1 To CountString(txt," ")+1
     t=LCase(StringField(txt,n," "))
     If t<>"":AddElement(words()):words()=t:q+t+" ":EndIf
@@ -1402,7 +1397,7 @@ Procedure lancerecherche(vide=#False) ; remplit la liste des resultats: mots tou
     *p=@page()
     If MapSize(sel())=0 Or FindMapElement(sel(),*p\groupe)
       t=LCase(*p\titre):ok=#True:rank=9 ; rank (9 = Least)
-      ForEach words() ; chaque mot dans le titre ou dans la source de la page
+      ForEach words() ; each word in the title or in the page source
         If FindString(t,words())=0 And FindString(*p\src,words(),1,#PB_String_NoCase)=0:ok=#False:Break:EndIf
       Next
       If ok And ListSize(words())
@@ -1451,7 +1446,7 @@ Procedure recherche()
   EndIf
 EndProcedure
 
-Procedure chipclick(gadget) ; clic sur une pastille: All efface la selection, sinon All suit l'etat; puis relance la recherche
+Procedure chipclick(gadget) ; click on a chip: All clears the selection, otherwise All is pressed only if nothing is selected
   Protected trouve,istous,nsel
 
   ForEach chip()
@@ -1475,7 +1470,7 @@ Procedure initui()
                         "          <vbox expand='item:2'>"+
                         "            <String name='rec'/>"+
                         "            <ListView name='recliste'/>"+
-                        "            <canvas name='chips' height='"+Str(#ChipsHeight)+"'/>"+
+                        "            <scrollarea name='chips' height='"+Str(#ChipsHeight)+"' flags='#PB_ScrollArea_BorderLess'/>"+
                         "            </vbox>"+
                         "          </tab>"
   CompilerIf #Standalone
@@ -1686,7 +1681,7 @@ EndProcedure
 
 Procedure timer() ; recharge l'aide si la source de la page courante a ete modifiee
   Protected memnom.s,l
-  placechips() ; suit le redimensionnement du panneau (splitter)
+  placechips() ; catches splitter moves (there is no resize event)
   If sommairevisible=0 And IsGadget(gsep) ; la largeur de la barre n'est connue qu'une fois le splitter affiche (GTK, Cocoa)
     l=largeurbarre:mesurebarre()
     If largeurbarre<>l:placesommaire():EndIf
@@ -1807,7 +1802,7 @@ Procedure destroy()
   If IsDialog(gdialog):FreeDialog(gdialog):EndIf
   If IsXML(gxml):FreeXML(gxml):EndIf
   gdialog=0:gxml=0:groot=0:gsommairevisible=-1:sommairevisible=0:*page=0:*pagesel=0
-  ClearList(chip()):gchips=0:gchipsarea=0 ; les gadgets des pastilles sont liberes avec le dialog
+  ClearList(chip()):gchips=0 ; the chip buttons are freed with the dialog
 EndProcedure
 
 Procedure resize(width, height)
@@ -2336,3 +2331,4 @@ CompilerElse
   AvailablePanelTools()\ToolName$            = "HelpToolLong"
 
 CompilerEndIf
+
