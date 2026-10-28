@@ -114,6 +114,7 @@ Global couleurul=$008800 ; couleur des bibliotheques utilisateur dans le sommair
 Global.s dos,repex ; dos: dossier du fichier de la page courante, repex: dossier des exemples (IDE)
 Global editiondate.q
 Global NewList jsmessages.s()
+Global zoomfactor.f=1.0 ; page zoom (Ctrl+wheel or Ctrl +/-), kept for the next pages
 Global iemode ; Windows: WebView2 indisponible, affichage degrade dans un WebGadget (Internet Explorer)
 ; ---------- pref
 Global waide,waidex,waidey,waidedx,waidedy
@@ -522,12 +523,17 @@ Procedure sethtml(ht.s)
   CompilerIf #PB_Compiler_OS = #PB_OS_Windows
     If iemode:SetGadgetItemText(gweb, #PB_Web_HtmlCode, iehtml(ht)):ProcedureReturn:EndIf
   CompilerEndIf
+  ; Zoom (Ctrl+wheel, Ctrl +/-/0) is done by the page (CSS zoom), because the native zoom is lost when another page is loaded; the factor is sent to jsaction() and injected in each new page
   ; boutons precedent/suivant de la souris et Alt+fleches: notre historique, pas celui du WebView (qui revient sur une ancienne page, parfois vide)
   ht=ReplaceString(ht,"<head>","<head><script>"+
                    "function nav(e,s) {e.preventDefault(); jsmessage('lk:'+s);}"+
                    "window.addEventListener('mousedown', function(e) {if (e.button==3 || e.button==4) e.preventDefault();});"+
                    "window.addEventListener('mouseup', function(e) {if (e.button==3) nav(e,'-'); else if (e.button==4) nav(e,'+');});"+
                    "window.addEventListener('keydown', function(e) {if ((e.altKey && e.key=='ArrowLeft') || e.key=='BrowserBack') nav(e,'-'); else if ((e.altKey && e.key=='ArrowRight') || e.key=='BrowserForward') nav(e,'+');});"+
+                   "var pbzoom="+StrF(zoomfactor,2)+"; document.documentElement.style.zoom=pbzoom;"+
+                   "function pbzoomset(v) {pbzoom=Math.min(3,Math.max(0.5,Math.round(v*100)/100)); document.documentElement.style.zoom=pbzoom; jsmessage('zm:'+pbzoom);}"+
+                   "window.addEventListener('wheel', function(e) {if (e.ctrlKey) {e.preventDefault(); pbzoomset(e.deltaY<0 ? pbzoom*1.1 : pbzoom/1.1);}}, {passive:false});"+
+                   "window.addEventListener('keydown', function(e) {if (e.ctrlKey && !e.altKey) {if (e.key=='+' || e.key=='=') {e.preventDefault(); pbzoomset(pbzoom*1.1);} else if (e.key=='-') {e.preventDefault(); pbzoomset(pbzoom/1.1);} else if (e.key=='0') {e.preventDefault(); pbzoomset(1);}}});"+
                    "</script>",#PB_String_CaseSensitive,1,1)
   SetGadgetItemText(gweb, #PB_WebView_HtmlCode, ht)
 EndProcedure
@@ -1280,6 +1286,9 @@ Procedure jsaction(message.s)
 
   If type="lk"  ; ------------------------ link
     affiche(LCase(val))
+  ElseIf type="zm" ; ------------------------ page zoom changed: kept for the next pages
+    zoomfactor=ValF(val)
+    If zoomfactor<0.5:zoomfactor=0.5:ElseIf zoomfactor>3:zoomfactor=3:EndIf
   Else          ; ------------------------ example
     Select Mid(type,1,1)
       Case "c" ;----- code
