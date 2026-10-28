@@ -1234,10 +1234,21 @@ Global hostwindow,gxml ; hostwindow: fenetre qui contient l'aide (pour les evene
 
 Macro dossier:If *page\userlib:dos=repul:Else:dos=rep+RepL:EndIf:EndMacro
 
+Procedure CollapseSommaire(TreeNo)
+  Protected ItemCnt,i 
+  If IsGadget(TreeNo)=0:ProcedureReturn:EndIf
+  ItemCnt=CountGadgetItems(TreeNo)-1
+  If ItemCnt<0:ProcedureReturn:EndIf
+  For i=0 To ItemCnt
+    SetGadgetItemState(TreeNo, i, #PB_Tree_Collapsed)    
+  Next
+EndProcedure
+
 Procedure affiche(page.s)
   Protected pilepos
   Debug page
   If Len(page)<>1 And FindMapElement(*pid(),page)=0:MessageRequester("PB Help", "not found : "+page):ProcedureReturn :EndIf
+  CollapseSommaire(gsommaire)
   Select page
     Case "-":If ListIndex(pilepage())<=0:ProcedureReturn:EndIf:PreviousElement(pilepage()):page=pilepage()
     Case "+":If ListIndex(pilepage())>=ListSize(pilepage())-1:ProcedureReturn:EndIf:NextElement(pilepage()):page=pilepage()
