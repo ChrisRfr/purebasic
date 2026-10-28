@@ -1238,7 +1238,7 @@ Procedure CollapseSommaire(TreeNo)
   Protected ItemCnt,i 
   If IsGadget(TreeNo)=0:ProcedureReturn:EndIf
   ItemCnt=CountGadgetItems(TreeNo)-1
-  If ItemCnt<0:ProcedureReturn:EndIf
+  If ItemCnt<1:ProcedureReturn:EndIf
   For i=0 To ItemCnt
     SetGadgetItemState(TreeNo, i, #PB_Tree_Collapsed)    
   Next
@@ -1835,7 +1835,7 @@ EndProcedure
 Procedure show(page.s) ; affiche une page si elle existe (aide contextuelle F1)
   page=LCase(page)
   If FindMapElement(*pid(),page)=0:ProcedureReturn #False:EndIf
-  CollapseSommaire(gsommaire)
+  ;CollapseSommaire(gsommaire) ; Collapse the table of contents tree before opening the page selected in the tree might not be a good idea after all. However, I am keeping the procedure
   affiche(page)
   If IsGadget(gonglet):SetGadgetState(gonglet,0):EndIf ; F1: back to the Contents tab, where the page is selected in the tree
   ProcedureReturn #True
