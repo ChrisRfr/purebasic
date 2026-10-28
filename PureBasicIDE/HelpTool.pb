@@ -1248,7 +1248,6 @@ Procedure affiche(page.s)
   Protected pilepos
   Debug page
   If Len(page)<>1 And FindMapElement(*pid(),page)=0:MessageRequester("PB Help", "not found : "+page):ProcedureReturn :EndIf
-  CollapseSommaire(gsommaire)
   Select page
     Case "-":If ListIndex(pilepage())<=0:ProcedureReturn:EndIf:PreviousElement(pilepage()):page=pilepage()
     Case "+":If ListIndex(pilepage())>=ListSize(pilepage())-1:ProcedureReturn:EndIf:NextElement(pilepage()):page=pilepage()
@@ -1836,6 +1835,7 @@ EndProcedure
 Procedure show(page.s) ; affiche une page si elle existe (aide contextuelle F1)
   page=LCase(page)
   If FindMapElement(*pid(),page)=0:ProcedureReturn #False:EndIf
+  CollapseSommaire(gsommaire)
   affiche(page)
   If IsGadget(gonglet):SetGadgetState(gonglet,0):EndIf ; F1: back to the Contents tab, where the page is selected in the tree
   ProcedureReturn #True
