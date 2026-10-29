@@ -640,13 +640,20 @@ Procedure pagesgenerees() ; pages construites a partir des autres pages (comme l
 EndProcedure
 
 Procedure layoutchips() ; places the chips line by line (vertical scrollbar only if they do not fit)
-  Protected x,y,pass,larg,haut,innerw,innerh
-  Protected pad=2,gap=2 ; or a little more space between the buttons with pad=3,gap=3
-
   If IsGadget(gchips)=0:ProcedureReturn:EndIf
+  Protected x,y,pass,larg,haut,innerw,innerh,dummy
+  Protected pad=2,gap=2 ; or a little more space between the buttons with pad=3,gap=3
+  Static scrollbarw
+  If scrollbarw=0
+    ; scrollbar width = required size of a vertical scrollbar (logical units)
+    dummy=ScrollBarGadget(#PB_Any,-10,0,0,100,0,1,1,#PB_ScrollBar_Vertical)
+    scrollbarw=GadgetWidth(dummy,#PB_Gadget_RequiredSize)
+    FreeGadget(dummy)
+  EndIf
+  
   larg=GadgetWidth(gchips):haut=GadgetHeight(gchips)
   For pass=0 To 1 ; pass 0: no vertical scrollbar, pass 1: room reserved for it
-    innerw=larg-2*pad-4-pass*20
+    innerw=larg-2*pad-4-pass*scrollbarw
     x=pad:y=pad
     ForEach chip()
       If x+chip()\w>innerw And x>pad:x=pad:y+chipheight+gap:EndIf
@@ -661,10 +668,10 @@ Procedure layoutchips() ; places the chips line by line (vertical scrollbar only
 EndProcedure
 
 Procedure placechips(Force=#False) ; relays out the chips when the size of the area (resized by the dialog) has changed; called on every possible resize
+  If IsGadget(gchips)=0:ProcedureReturn:EndIf
   Protected w,h
   Static chipsw,chipsh
   
-  If IsGadget(gchips)=0:ProcedureReturn:EndIf
   w=GadgetWidth(gchips):h=GadgetHeight(gchips)
   If w<20 Or h<10:chipsw=-1:ProcedureReturn:EndIf ; in case panel not shown yet
   If Force Or w<>chipsw Or h<>chipsh
@@ -674,10 +681,10 @@ Procedure placechips(Force=#False) ; relays out the chips when the size of the a
 EndProcedure
 
 Procedure buildchips() ; (re)creates the chips: one per library + Reference, from the loaded pages
-  Protected nom$, Dummy
+  If IsGadget(gchips)=0:ProcedureReturn:EndIf
+  Protected nom$, dummy
   Protected NewMap libfichier.s(), NewMap libnom.i()
 
-  If IsGadget(gchips)=0:ProcedureReturn:EndIf
   ForEach chip():If IsGadget(chip()\gadget):FreeGadget(chip()\gadget):EndIf:Next ; only the buttons: the scroll area belongs to the dialog
   ClearList(chip())
 
@@ -707,21 +714,20 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
   EndIf
   AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom="All":chip()\tous=#True
 
-  
   OpenGadgetList(gchips)
   ; chip size = required size of a button with the small font
   If chipfont=0:chipfont=LoadFont(#PB_Any,#ChipFontName$,#ChipFontSize):EndIf
-  Dummy=ButtonGadget(#PB_Any,0,0,0,0,"Abc")
-  If chipfont:SetGadgetFont(Dummy,FontID(chipfont)):EndIf
-  chipheight=GadgetHeight(Dummy,#PB_Gadget_RequiredSize)
+  dummy=ButtonGadget(#PB_Any,0,0,0,0,"Abc")
+  If chipfont:SetGadgetFont(dummy,FontID(chipfont)):EndIf
+  chipheight=GadgetHeight(dummy,#PB_Gadget_RequiredSize)
   ;If chipheight<=0:chipheight=18:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   ForEach chip()
-    SetGadgetText(Dummy,chip()\nom)
-    chip()\w=GadgetWidth(Dummy,#PB_Gadget_RequiredSize)
+    SetGadgetText(dummy,chip()\nom)
+    chip()\w=GadgetWidth(dummy,#PB_Gadget_RequiredSize)
     ;If chip()\w<=0:chip()\w=Len(chip()\nom)*6+14:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   Next
-  FreeGadget(Dummy)
-  
+  FreeGadget(dummy)
+    
   ; the buttons go inside the scroll area created by the dialog
   ForEach chip()
     chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\nom,#PB_Button_Toggle)
@@ -1234,13 +1240,15 @@ Global hostwindow,gxml ; hostwindow: fenetre qui contient l'aide (pour les evene
 
 Macro dossier:If *page\userlib:dos=repul:Else:dos=rep+RepL:EndIf:EndMacro
 
-Procedure CollapseSommaire(TreeNo)
-  Protected ItemCnt,i 
+Procedure CollapseSommaire(TreeNo) ; collapses all the items of a TreeGadget (the call in show() is commented, see there)
   If IsGadget(TreeNo)=0:ProcedureReturn:EndIf
+  Protected ItemCnt,i 
   ItemCnt=CountGadgetItems(TreeNo)-1
   If ItemCnt<1:ProcedureReturn:EndIf
   For i=0 To ItemCnt
-    SetGadgetItemState(TreeNo, i, #PB_Tree_Collapsed)    
+    If GetGadgetItemState(TreeNo,i) & #PB_Tree_Expanded
+      SetGadgetItemState(TreeNo, i, #PB_Tree_Collapsed)
+    EndIf
   Next
 EndProcedure
 
@@ -1668,8 +1676,8 @@ Procedure mesurebarre() ; IDE: largeur de la barre du separateur, en coordonnees
 EndProcedure
 
 Procedure placesommaire() ; IDE: sommaire masque: la barre du separateur est placee juste a gauche de la zone visible
+  If sommairevisible Or IsGadget(gsep)=0 Or IsGadget(groot)=0:ProcedureReturn:EndIf
   Protected l
-  If sommairevisible Or IsGadget(gsep)=0:ProcedureReturn:EndIf
   If GetGadgetState(gsep)<>0:SetGadgetState(gsep,0):EndIf
   mesurebarre()
   l=largeurbarre:If l<0:l=8:EndIf
@@ -1754,7 +1762,12 @@ Procedure init(language.s,operatingsys.s) ; outil autonome
 
   ; chemin dossier de l'aide (issu de PBHelp.ini), ou archive
   If FileSize(helpsource)<>-2 And LCase(GetExtensionPart(helpsource))<>"zip"
-    helpsource="C:\Users\shadoko\Desktop\git-pb\pbaidenv.zip"; chemin archive de l'aide (GetCurrentDirectory()+"PureBasicHelp")
+  helpsource=GetPathPart(ProgramFilename())
+  CompilerIf #PB_Compiler_OS = #PB_OS_Windows; chemin archive de l'aide (GetCurrentDirectory()+"PureBasicHelp")
+    helpsource+"Help\Help.zip"
+  CompilerElse
+    helpsource+"Help/Help.zip"
+  CompilerEndIf
   EndIf
   opensource(helpsource)
 
@@ -1835,7 +1848,12 @@ EndProcedure
 Procedure show(page.s) ; affiche une page si elle existe (aide contextuelle F1)
   page=LCase(page)
   If FindMapElement(*pid(),page)=0:ProcedureReturn #False:EndIf
-  ;CollapseSommaire(gsommaire) ; Collapse the table of contents tree before opening the page selected in the tree might not be a good idea after all. However, I am keeping the procedure
+  
+  ; Open question: collapse the whole contents tree before showing the page requested with F1?
+  ; - Collapsed: only the branch of the requested page is open, so every F1 gives the same clean view.
+  ; - Not collapsed (current behaviour): the branches opened by previous F1 stay open for the whole session.
+  ;CollapseSommaire(gsommaire)
+  
   affiche(page)
   If IsGadget(gonglet):SetGadgetState(gonglet,0):EndIf ; F1: back to the Contents tab, where the page is selected in the tree
   ProcedureReturn #True
@@ -2351,4 +2369,3 @@ CompilerElse
   AvailablePanelTools()\ToolName$            = "HelpToolLong"
 
 CompilerEndIf
-
