@@ -89,6 +89,7 @@ EndStructure
 
 Structure schip ; search chip (one per library, plus All)
   nom.s
+  caption.s
   gadget.i
   w.l
   tous.b ; 1 = the All chip
@@ -714,8 +715,18 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
   If FindMapElement(libnom(),#GroupeReference$)
     AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom=#GroupeReference$
   EndIf
-  AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom=_All:chip()\tous=#True
-
+  AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom="All":chip()\tous=#True
+  
+  ForEach chip()
+    If chip()\tous
+      chip()\caption=_All
+    ElseIf chip()\nom=#GroupeReference$
+      chip()\caption=_Reference
+    Else
+      chip()\caption=chip()\nom
+    EndIf
+  Next
+  
   OpenGadgetList(gchips)
   ; chip size = required size of a button with the small font
   If chipfont=0:chipfont=LoadFont(#PB_Any,#ChipFontName$,#ChipFontSize):EndIf
@@ -724,7 +735,7 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
   chipheight=GadgetHeight(dummy,#PB_Gadget_RequiredSize)
   ;If chipheight<=0:chipheight=18:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   ForEach chip()
-    SetGadgetText(dummy,chip()\nom)
+    SetGadgetText(dummy,chip()\caption)
     chip()\w=GadgetWidth(dummy,#PB_Gadget_RequiredSize)
     ;If chip()\w<=0:chip()\w=Len(chip()\nom)*6+14:EndIf ; Claude fallback if the required size is not available but no reason why it shouldn't work
   Next
@@ -732,11 +743,7 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
     
   ; the buttons go inside the scroll area created by the dialog
   ForEach chip()
-    If chip()\nom=#GroupeReference$
-      chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,_Reference,#PB_Button_Toggle)
-    Else
-      chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\nom,#PB_Button_Toggle)
-    EndIf
+    chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\caption,#PB_Button_Toggle)
     If chipfont:SetGadgetFont(chip()\gadget,FontID(chipfont)):EndIf
     If chip()\tous:SetGadgetState(chip()\gadget,1):EndIf ; All pressed: no library selected
   Next
