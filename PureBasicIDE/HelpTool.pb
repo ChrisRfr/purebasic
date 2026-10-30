@@ -126,7 +126,7 @@ Global NewList chip.schip()
 Global.s icoouvrir="&#128194;",icoexecuter="&#9654;" ; boutons des exemples (remplacés par les icônes de l'IDE)
 ; ---------- traduction
 Global.s listlg,    _Sommairec,_Valeurr,_Aucune,_Remarques,_Exemple,_Voiraussi,_OSSupportes,_Syntaxe,_Description,_Generalites,_Parametres,_tester,_ouvrir,_executer
-Global.s _Aide,_Sommaire,_Recherche,_acceuil,_prec,_suiv,_editer,_sommairevisible
+Global.s _Aide,_Sommaire,_Recherche,_All,_Reference,_acceuil,_prec,_suiv,_editer,_sommairevisible
 Global.s _Deprecie,_Deprecietxt,_Indexcommandes,_Constantes,_Fonctionsos
 
 listlg="English,French,German";,Italian,Spanish,Russian"
@@ -158,6 +158,8 @@ Procedure initlang()
   _Aide=lg("Help,Aide,Hilfe,Aiuto,Ayuda,Справка")
   _Sommaire=lg("Contents,Sommaire,Inhaltsverzeichnis,Contenuto,Contenido,Содержание")
   _Recherche=lg("Search,Recherche,Suche,Ricerca,Búsqueda,Поиск")
+  _All=lg("All,Tous,Alle,Tutti,Todos,Все")
+  _Reference=lg("Reference,Référence,Referenz,Riferimento,Referencia,Референция")
   _acceuil=lg("Home,Accueil,Startseite")
   _prec=lg("Back,Précédent,Zurück")
   _suiv=lg("Forward,Suivant,Vorwärts")
@@ -712,7 +714,7 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
   If FindMapElement(libnom(),#GroupeReference$)
     AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom=#GroupeReference$
   EndIf
-  AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom="All":chip()\tous=#True
+  AddElement(chip()):MoveElement(chip(),#PB_List_First):chip()\nom=_All:chip()\tous=#True
 
   OpenGadgetList(gchips)
   ; chip size = required size of a button with the small font
@@ -730,7 +732,11 @@ Procedure buildchips() ; (re)creates the chips: one per library + Reference, fro
     
   ; the buttons go inside the scroll area created by the dialog
   ForEach chip()
-    chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\nom,#PB_Button_Toggle)
+    If chip()\nom=#GroupeReference$
+      chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,_Reference,#PB_Button_Toggle)
+    Else
+      chip()\gadget=ButtonGadget(#PB_Any,0,0,chip()\w,chipheight,chip()\nom,#PB_Button_Toggle)
+    EndIf
     If chipfont:SetGadgetFont(chip()\gadget,FontID(chipfont)):EndIf
     If chip()\tous:SetGadgetState(chip()\gadget,1):EndIf ; All pressed: no library selected
   Next
@@ -1834,6 +1840,7 @@ Procedure destroy()
   If IsDialog(gdialog):FreeDialog(gdialog):EndIf
   If IsXML(gxml):FreeXML(gxml):EndIf
   gdialog=0:gxml=0:groot=0:gsommairevisible=-1:sommairevisible=0:*page=0:*pagesel=0
+  If chipfont And IsFont(chipfont):FreeFont(chipfont):chipfont=0:EndIf
   ClearList(chip()):gchips=0 ; the chip buttons are freed with the dialog
 EndProcedure
 
