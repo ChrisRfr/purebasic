@@ -4,6 +4,8 @@
 ; Page style, images, search highlight and Internet Explorer mode.
 ; Included inside Module pbhelp (EnableExplicit is active).
 
+#BrLineHeight   = 60    ; line break <br> height as a percentage
+
 ; Default theme: CSS variables (replaced by the colors of the IDE theme, see setcolors()) and page style.
 Theme\Colors$ = ":root {color-scheme: light; --bg:#fed; --text:#000; --titlebg:#ff8; --codebg:#edc; --tablebg:#fff; --optbg:#eee; --border:#0002; --notebg:#f80; --link:#00f; --constant:#a00; --function:#088; --keyword:#088; --userlib:#080;}"
 Theme\ColorsLight$ = Theme\Colors$
@@ -11,6 +13,7 @@ Theme\ColorsDark$ = ":root {color-scheme: dark; --bg:#1f2023; --text:#e0e0e0; --
 Theme\Style$ = "body {display: inline-block; min-width: calc(100% - 38px); box-sizing: border-box; background-color: var(--bg); color: var(--text); font-family: Arial, Helvetica, sans-serif; font-size: 10pt;margin-left:30px}" +
          "h2 {position: sticky;z-index: 10;font-size:20pt; font-weight: normal; top:0; text-align: center; background-color:var(--titlebg);padding: 5px; margin:-8px -8px 8px -30px; box-shadow: 0px 5px 5px #00000088;}" +
          "h3 {margin-left:-20px;}" +
+         "br {display:block;line-height:" + Str(#BrLineHeight) + "%;}" +
          "a, a:visited, a:active {font-size: 10pt; color: var(--link);}" +
          ".nav, .nav a {color: var(--link); font-size: 13px;}" +
          ".cst {color: var(--constant);} .fct {color: var(--function);} .kw {color: var(--keyword); font-weight: bold;} .ul {color: var(--userlib);}" +
@@ -23,7 +26,7 @@ Theme\Style$ = "body {display: inline-block; min-width: calc(100% - 38px); box-s
          "pre {overflow: visible; width: max-content; min-width: 100%; box-sizing: border-box; font-family:consolas, Courier, monospace; font-size: 9pt;}" +
          "pre.ex {padding: 5px; background-color:var(--codebg);border-style: solid; border-width:1px; border-color:var(--border);}" +
          "button {box-shadow: 2px 2px 2px #0008;}" +
-         ".butcode {display: flex; gap: 5px; width: fit-content; margin: 8px 0 3px auto; position: sticky; right: 5px;}" +
+         ".butcode {display: flex; gap: 5px; width: fit-content; margin: 8px 0 6px auto; position: sticky; right: 5px;}" +
          "table {box-shadow: 2px 2px 3px #0008;background-color: var(--tablebg);}" +
          "table, th, td {border-collapse: collapse;padding:2px 10px 2px;font-size: 10pt;border-color:var(--border);}" +
          "table.param {width:100%;  border-spacing: 0px; border-style: none; }" +

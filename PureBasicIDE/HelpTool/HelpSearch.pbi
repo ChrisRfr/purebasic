@@ -328,6 +328,8 @@ EndProcedure
 
 ; Shows or hides the chips (whole scroll area). Hidden = no filter: All is selected and the results are refreshed.
 Procedure FiltersShow(Visible)
+  Protected Height
+
   If IsGadget(Ui\Chips) = 0
     ProcedureReturn
   EndIf
@@ -337,7 +339,12 @@ Procedure FiltersShow(Visible)
   EndIf
   If Visible
     HideGadget(Ui\Chips, 0)
-    RefreshDialog(Ui\Dialog) ; the dialog gives the space back to the chips area
+    RefreshDialog(Ui\Dialog)
+    ; The dialog does not know that FiltersFit() resized the list: it gets its normal height back here, otherwise it covers the chips.
+    Height = GadgetY(Ui\Chips) - View\FiltersGap - GadgetY(Ui\Results)
+    If Height > 40
+      ResizeGadget(Ui\Results, #PB_Ignore, #PB_Ignore, #PB_Ignore, Height)
+    EndIf
     ChipsPlace(#True)
   Else
     ForEach Chips()
@@ -345,6 +352,7 @@ Procedure FiltersShow(Visible)
     Next
     SearchRun(#True)
     View\FiltersMargin = GetGadgetAttribute(Ui\Panel, #PB_Panel_ItemHeight) - (GadgetY(Ui\Chips) + GadgetHeight(Ui\Chips)) ; space under the chips
+    View\FiltersGap = GadgetY(Ui\Chips) - (GadgetY(Ui\Results) + GadgetHeight(Ui\Results)) ; space between the list and the chips
     HideGadget(Ui\Chips, 1)
     FiltersFit()
   EndIf

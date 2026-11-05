@@ -30,7 +30,8 @@ DeclareModule pbhelp
   Prototype.s ProtoColorCode(Code$)  ; IDE syntax highlighting of an example: returns the html code (special characters escaped)
   Prototype ProtoClose()             ; Escape in the help: give the focus back to the editor
   Prototype ProtoMode(InToolsPanel)  ; toggle button "in the tools panel": 1 = tools panel, 0 = window
-  Global OpenCodeCallback.ProtoOpenCode, EditFileCallback.ProtoEditFile, ApplyColorsCallback.ProtoApplyColors, ColorCodeCallback.ProtoColorCode, CloseCallback.ProtoClose, ModeCallback.ProtoMode
+  Prototype.s ProtoLanguage(Group$, Key$) ; IDE: text of the language files (Language()), instead of the built-in translations
+  Global OpenCodeCallback.ProtoOpenCode, EditFileCallback.ProtoEditFile, ApplyColorsCallback.ProtoApplyColors, ColorCodeCallback.ProtoColorCode, CloseCallback.ProtoClose, ModeCallback.ProtoMode, LanguageCallback.ProtoLanguage
 
   Declare Init(LanguageName$, SystemName$)
   Declare.s BuildHelpFolder(Source$, Destination$)
@@ -54,8 +55,8 @@ EndDeclareModule
 
 Module pbhelp
   EnableExplicit
-
-  IncludePath "HelpTool" ; the includes are in the subfolder Help
+  
+  IncludePath "HelpTool" ; the includes are in the subfolder HelpTool
   XIncludeFile "HelpConfig.pbi"
   XIncludeFile "HelpCatalog.pbi"
   XIncludeFile "HelpText.pbi"
@@ -76,7 +77,7 @@ Procedure Help_EnableDarkMode(Enable = #True)
   pbhelp::EnableDarkMode(Enable)
 EndProcedure
 
-
+  
 CompilerIf #PB_Compiler_IsMainFile
 
   ;Debug pbhelp::CheckSources(#PB_Compiler_Home + "Help/Help.zip")
@@ -103,9 +104,12 @@ CompilerIf #PB_Compiler_IsMainFile
     EndIf
     End
   EndIf
-
-  pbhelp::Init("French", "Windows")
-
+  
+  ; Choose default language for the standalone HelpTool
+  pbhelp::Init("French", "Windows") 
+  ;pbhelp::Init("German", "Windows")
+  ;pbhelp::Init("English", "Windows")
+  
 CompilerElse
 
   UsePNGImageEncoder()
@@ -295,6 +299,11 @@ CompilerElse
 
   ; Called by the help when 'Load' or 'Run' is clicked on an example
   ;
+  ; Texts of the help tool: the [HelpTool] section of the language files of the IDE.
+  Procedure.s HelpTool_Text(Group$, Key$)
+    ProcedureReturn Language(Group$, Key$)
+  EndProcedure
+
   ; Escape in the help: gives the focus back to the editor (to complete in the IDE: ie SetActiveGadget() of the active source).
   Procedure HelpTool_Close()
 
@@ -417,6 +426,7 @@ CompilerElse
     pbhelp::ColorCodeCallback = @HelpTool_ColorCode()
     pbhelp::CloseCallback = @HelpTool_Close()
     pbhelp::ModeCallback = @HelpTool_Mode()
+    pbhelp::LanguageCallback = @HelpTool_Text()
     ; User libraries in the contents tree: same color as in the help pages, when the tree uses the IDE colors
     If (*Entry\IsSeparateWindow = 0 Or NoIndependentToolsColors = 0) And ToolsPanelUseColors
       UserLibColor = Colors(#COLOR_CustomKeyword)\DisplayValue

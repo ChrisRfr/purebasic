@@ -4,34 +4,38 @@
 ; Constants, structures and state shared by the files of module pbhelp.
 ; Included inside Module pbhelp (EnableExplicit is active).
 ;
-; The constants are kept here so that HelpTool stays standalone. When the tool is integrated in the IDE,
-; the constants (and the custom events) move to Common.pb.
+; The constants are all in the block below, so that HelpTool stays standalone. In the IDE they move to Common.pb:
+; copy the block there, add #HelpTool_ConstantsDefined = 1 (this block is then skipped) and keep the values you want.
 
-#LanguageList$    = "English,French,German" ; help languages (the translation blocks of HelpCatalog.pbi also have Italian, Spanish, Russian)
-#TextGroup$       = "HelpTool"              ; [HelpTool] section of the translations (Editor.catalog in the IDE)
-#IdentifierChars$ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" ; characters of a function or constant name
+CompilerIf Not Defined(HelpTool_ConstantsDefined, #PB_Constant)
+  #LanguageList$    = "English,French,German" ; help languages (the translation blocks of HelpCatalog.pbi also have Italian, Spanish, Russian)
+  #TextGroup$       = "HelpTool"              ; [HelpTool] section of the translations (Editor.catalog in the IDE)
+  #IdentifierChars$ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" ; characters of a function or constant name
 
-#PB_Help_DarkMode = #True  ; dark colors for the pages (can be changed at any time with EnableDarkMode()). Will become a preference.
-#PB_Help_ThemeIcons = #False ; IDE: #False = toolbar icons drawn from symbols (black, light in dark mode; like the standalone tool), #True = icons of the IDE theme
-#PB_Helpsample_Image = #False ; example buttons: #True = icons with a tooltip, #False = text buttons (Copy, Open, Run). Will become a preference.
-
-#EventJsMessage = #PB_Event_FirstCustomValue + 500 ; WebView callback actions are deferred to the event loop
-#MenuEscape     = 1                                ; standalone: Escape closes the help
-#ChipsHeight    = 150   ; height of the chips area (it scrolls only if the chips do not fit)
-#SearchHeight   = 26    ; height of the search string (logical pixels)
-#GroupReference$ = "Reference" ; chip for the pages outside a library
-CompilerSelect #PB_Compiler_OS
-  CompilerCase #PB_OS_Windows
-    #ChipFontName$ = "Segoe UI"      ; Windows: IDE default Font, size 10 -> chips 8  or a little smaller 7
-    #ChipFontSize  = 8
-  CompilerCase #PB_OS_MacOS
-    #ChipFontName$ = "Lucida Grande" ; MacOS:   IDE default Font, size 13 -> chips 10 or a little smaller 9
-    #ChipFontSize  = 10
-  CompilerDefault
-    #ChipFontName$ = "DejaVu Sans"   ; Linux:   IDE default Font, size 10 -> chips 8 or a little smaller 7
-    #ChipFontSize  = 8
-CompilerEndSelect
-#ForceIEMode    = #False ; Windows: #True to test the degraded mode (WebGadget/Internet Explorer) even if WebView2 is available
+  #PB_Help_DarkMode    = #True  ; dark colors for the pages (can be changed at any time with EnableDarkMode()). Will become a preference.
+  #PB_Help_ThemeIcons  = #False ; IDE: #False = toolbar icons drawn from symbols (black, light in dark mode; like the standalone tool), #True = icons of the IDE theme
+  #PB_Helpsample_Image = #False ; example buttons: #True = icons with a tooltip, #False = text buttons (Copy, Open, Run). Will become a preference.
+  #EventJsMessage = #PB_Event_FirstCustomValue + 500 ; WebView callback actions are deferred to the event loop
+  #MenuEscape     = 1                                ; standalone: Escape closes the help
+  #ChipsHeight    = 150   ; height of the chips area (it scrolls only if the chips do not fit)
+  #SearchHeight   = 26    ; height of the search string (logical pixels)
+  #GroupReference$ = "Reference" ; chip for the pages outside a library
+  #ForceIEMode    = #False ; Windows: #True to test the degraded mode (WebGadget/Internet Explorer) even if WebView2 is available
+  CompilerSelect #PB_Compiler_OS
+    CompilerCase #PB_OS_Windows
+      #ChipFontName$ = "Segoe UI"      ; Windows: IDE default Font, size 10 -> chips 8  or a little smaller 7
+      #ChipFontSize  = 8
+      #IconFontName$ = "Segoe UI Symbol" ; font that has the symbols of the toolbar icons
+    CompilerCase #PB_OS_MacOS
+      #ChipFontName$ = "Lucida Grande" ; MacOS:   IDE default Font, size 13 -> chips 10 or a little smaller 9
+      #ChipFontSize  = 10
+      #IconFontName$ = "Apple Symbols"
+    CompilerDefault
+      #ChipFontName$ = "DejaVu Sans"   ; Linux:   IDE default Font, size 10 -> chips 8 or a little smaller 7
+      #ChipFontSize  = 8
+      #IconFontName$ = "DejaVu Sans"
+  CompilerEndSelect
+CompilerEndIf
 
 ; State of the help source: a folder, or a .zip archive read in memory.
 Structure HelpSourceState
@@ -105,15 +109,6 @@ Enumeration ToolbarIcon
   #IconEdit
 EndEnumeration
 
-CompilerSelect #PB_Compiler_OS ; font that has the symbols of the toolbar icons
-  CompilerCase #PB_OS_Windows
-    #IconFontName$ = "Segoe UI Symbol"
-  CompilerCase #PB_OS_MacOS
-    #IconFontName$ = "Apple Symbols"
-  CompilerDefault
-    #IconFontName$ = "DejaVu Sans"
-CompilerEndSelect
-
 ; One search chip (one per library, plus All).
 Structure ChipInfo
   Name$
@@ -173,6 +168,7 @@ Structure ViewState
   ContentsVisible.i  ; IDE: contents shown
   FiltersVisible.i   ; chips shown
   FiltersMargin.i    ; space under the chips (to give the freed height to the results list when they are hidden)
+  FiltersGap.i       ; space between the results list and the chips (to restore the list when they are shown again)
   InToolsPanel.i     ; IDE: shown in the tools panel (1) or in a window (0)
   SplitPos.i         ; IDE: splitter position
   BarWidth.i         ; IDE: splitter bar width (-1: not measured yet)

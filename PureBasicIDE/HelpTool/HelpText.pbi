@@ -95,6 +95,9 @@ EndProcedure
 
 ; Text of Key$ in the section Group$ of the current language (the key itself if it is unknown).
 Procedure.s Language(Group$, Key$)
+  If LanguageCallback ; IDE: the texts are in the language files of the IDE ([HelpTool] section)
+    ProcedureReturn LanguageCallback(Group$, Key$)
+  EndIf
   If FindMapElement(Catalog$(), Group$ + "/" + Key$)
     ProcedureReturn Catalog$()
   EndIf

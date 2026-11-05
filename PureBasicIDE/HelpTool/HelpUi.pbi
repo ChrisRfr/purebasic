@@ -369,8 +369,13 @@ Procedure PagesReload()
   View\PageName$ = ""
   If PagesLoad() = #False ; help source not found
     ClearGadgetItems(Ui\Contents)
-    ShowHtml("<html><head><style>" + Theme\Colors$ + Theme\Style$ + "</style></head><body><h2>" + Language(#TextGroup$, "Help") + "</h2>" +
-             Language(#TextGroup$, "HelpNotFound") + " <b>" + HtmlEscape(HelpSource\Path$) + "</b></body></html>")
+    Text$ = "<html><head><style>" + Theme\Colors$ + Theme\Style$ + "</style></head><body><h2>" + Language(#TextGroup$, "Help") + "</h2>" +
+            Language(#TextGroup$, "HelpNotFound") + " <br><br><b>" + HtmlEscape(HelpSource\Path$) + "</b>"
+    If GetPathPart(ProgramFilename()) = GetTemporaryDirectory()
+      Text$ + "<br><br><br>" + Language(#TextGroup$, "TmpSourceDir")
+    EndIf
+    Text$ + "</body></html>"
+    ShowHtml(Text$)
     ProcedureReturn
   EndIf
   PagesOutline(Outline$())
